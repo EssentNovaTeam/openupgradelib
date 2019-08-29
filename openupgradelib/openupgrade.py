@@ -507,13 +507,24 @@ def rename_columns(cr, column_spec):
     """
     for table in column_spec.keys():
         for (old, new) in column_spec[table]:
+            rename_index = True
+
             if new is None:
                 new = get_legacy_name(old)
+                rename_index = False
+
             logger.info("table %s, column %s: renaming to %s",
                         table, old, new)
             cr.execute(
                 'ALTER TABLE "%s" RENAME "%s" TO "%s"' % (table, old, new,))
-            cr.execute('DROP INDEX IF EXISTS "%s_%s_index"' % (table, old))
+
+            if rename_index:
+                cr.execute(
+                    'ALTER INDEX IF EXISTS "%s_%s_index" '
+                    'RENAME TO "%s_%s_index"' % (table, old, table, new)
+                )
+            else:
+                cr.execute('DROP INDEX IF EXISTS "%s_%s_index"' % (table, old))
 
 
 def rename_fields(env, field_spec, no_deep=False):
